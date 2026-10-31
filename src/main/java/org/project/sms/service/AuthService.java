@@ -20,17 +20,20 @@ public class AuthService {
 
 	private final PasswordEncoder passwordEncoder;
 
+	private final JwtService jwtService;
+
 	@Transactional(readOnly = true)
 	public LoginResponseDto login(LoginRequestDto request) {
 		// BCrypt accepts at most 72 UTF-8 bytes; reject longer inputs without truncation.
 		if (request.getPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
-			return new LoginResponseDto(false, null, null);
+			return new LoginResponseDto(false, null, null, null);
 		}
 
 		return authRepository.findByName(request.getName())
 				.filter(user -> passwordEncoder.matches(request.getPassword(), user.getPassword()))
-				.map(user -> new LoginResponseDto(true, user.getName(), Instant.now()))
-				.orElseGet(() -> new LoginResponseDto(false, null, null));
+				.map(user -> new LoginResponseDto(true, user.getName(), Instant.now(),
+						jwtService.generateToken(user.getName())))
+				.orElseGet(() -> new LoginResponseDto(false, null, null, null));
 	}
 
 }

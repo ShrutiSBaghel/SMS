@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.project.sms.entity.Employee;
 import org.project.sms.repository.EmployeeRepository;
+import org.project.sms.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -30,13 +31,17 @@ class EmployeeControllerIntegrationTests {
 
 	private final ObjectMapper objectMapper;
 
+	private final JwtService jwtService;
+
 	@LocalServerPort
 	private int port;
 
 	@Autowired
-	EmployeeControllerIntegrationTests(EmployeeRepository employeeRepository, ObjectMapper objectMapper) {
+	EmployeeControllerIntegrationTests(EmployeeRepository employeeRepository, ObjectMapper objectMapper,
+			JwtService jwtService) {
 		this.employeeRepository = employeeRepository;
 		this.objectMapper = objectMapper;
+		this.jwtService = jwtService;
 	}
 
 	@BeforeEach
@@ -119,6 +124,7 @@ class EmployeeControllerIntegrationTests {
 	private HttpResponse<String> get(String path) throws Exception {
 		try (var client = HttpClient.newHttpClient()) {
 			var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+					.header("Authorization", "Bearer " + jwtService.generateToken("tester"))
 					.timeout(Duration.ofSeconds(10))
 					.GET()
 					.build();

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.project.sms.entity.Department;
 import org.project.sms.repository.DepartmentRepository;
+import org.project.sms.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -44,13 +45,17 @@ class DepartmentControllerIntegrationTests {
 
 	private final ObjectMapper objectMapper;
 
+	private final JwtService jwtService;
+
 	@LocalServerPort
 	private int port;
 
 	@Autowired
-	DepartmentControllerIntegrationTests(DepartmentRepository departmentRepository, ObjectMapper objectMapper) {
+	DepartmentControllerIntegrationTests(DepartmentRepository departmentRepository, ObjectMapper objectMapper,
+			JwtService jwtService) {
 		this.departmentRepository = departmentRepository;
 		this.objectMapper = objectMapper;
+		this.jwtService = jwtService;
 	}
 
 	@BeforeEach
@@ -93,6 +98,7 @@ class DepartmentControllerIntegrationTests {
 	private HttpResponse<String> getDepartments() throws Exception {
 		try (var client = HttpClient.newHttpClient()) {
 			var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/departments"))
+					.header("Authorization", "Bearer " + jwtService.generateToken("tester"))
 					.timeout(Duration.ofSeconds(10))
 					.GET()
 					.build();

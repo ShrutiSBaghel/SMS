@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.project.sms.entity.SalaryStructure;
 import org.project.sms.repository.SalaryStructureRepository;
+import org.project.sms.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -29,14 +30,17 @@ class SalaryStructureControllerIntegrationTests {
 
 	private final ObjectMapper objectMapper;
 
+	private final JwtService jwtService;
+
 	@LocalServerPort
 	private int port;
 
 	@Autowired
 	SalaryStructureControllerIntegrationTests(SalaryStructureRepository salaryStructureRepository,
-			ObjectMapper objectMapper) {
+			ObjectMapper objectMapper, JwtService jwtService) {
 		this.salaryStructureRepository = salaryStructureRepository;
 		this.objectMapper = objectMapper;
+		this.jwtService = jwtService;
 	}
 
 	@BeforeEach
@@ -90,6 +94,7 @@ class SalaryStructureControllerIntegrationTests {
 	private HttpResponse<String> get(String query) throws Exception {
 		try (var client = HttpClient.newHttpClient()) {
 			var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/salary-structures" + query))
+					.header("Authorization", "Bearer " + jwtService.generateToken("tester"))
 					.timeout(Duration.ofSeconds(10))
 					.GET()
 					.build();

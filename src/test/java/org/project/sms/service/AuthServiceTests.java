@@ -23,13 +23,16 @@ class AuthServiceTests {
 	@Mock
 	private AuthRepository authRepository;
 
+	@Mock
+	private JwtService jwtService;
+
 	private AuthService authService;
 
 	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
 	@BeforeEach
 	void configureService() {
-		authService = new AuthService(authRepository, passwordEncoder);
+		authService = new AuthService(authRepository, passwordEncoder, jwtService);
 	}
 
 	@Test
@@ -38,6 +41,7 @@ class AuthServiceTests {
 		user.setName("Verified name");
 		user.setPassword(passwordEncoder.encode("test-password"));
 		when(authRepository.findByName("tester")).thenReturn(Optional.of(user));
+		when(jwtService.generateToken("Verified name")).thenReturn("test.jwt.token");
 		var before = Instant.now();
 
 		var response = authService.login(request("test-password"));
@@ -45,6 +49,8 @@ class AuthServiceTests {
 		assertThat(response.isAuthenticated()).isTrue();
 		assertThat(response.getName()).isEqualTo("Verified name");
 		assertThat(response.getLoginTime()).isBetween(before, Instant.now());
+		assertThat(response.getToken()).isEqualTo("test.jwt.token");
+		assertThat(response.toString()).doesNotContain("test.jwt.token");
 		assertThat(response.toString()).doesNotContain("test-password", user.getPassword());
 	}
 
@@ -60,6 +66,8 @@ class AuthServiceTests {
 		assertThat(response.isAuthenticated()).isFalse();
 		assertThat(response.getName()).isNull();
 		assertThat(response.getLoginTime()).isNull();
+		assertThat(response.getToken()).isNull();
+		verifyNoInteractions(jwtService);
 	}
 
 	@Test
@@ -71,6 +79,8 @@ class AuthServiceTests {
 		assertThat(response.isAuthenticated()).isFalse();
 		assertThat(response.getName()).isNull();
 		assertThat(response.getLoginTime()).isNull();
+		assertThat(response.getToken()).isNull();
+		verifyNoInteractions(jwtService);
 	}
 
 	@Test
