@@ -2,6 +2,7 @@ package org.project.sms.service;
 
 import org.project.sms.dto.DepartmentDto;
 import org.project.sms.repository.DepartmentRepository;
+import org.project.sms.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import java.util.List;
 public class DepartmentService {
 
 	private final DepartmentRepository departmentRepository;
+	private final EmployeeRepository employeeRepository;
 
 	@Transactional(readOnly = true)
 	public List<DepartmentDto> getAllDep() {
@@ -21,8 +23,7 @@ public class DepartmentService {
 				.map(department -> new DepartmentDto(
 						department.getId(),
 						department.getName(),
-						// TODO: Query the employee count per department when the employee table is added.
-						0L))
+						employeeRepository.countByDepartmentId(department.getId())))
 				.toList();
 	}
 

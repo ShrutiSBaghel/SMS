@@ -3,7 +3,7 @@ package org.project.sms.service;
 import java.util.List;
 
 import org.project.sms.dto.EmployeeDto;
-import org.project.sms.dto.EmployeeFilterRequest;
+import org.project.sms.entity.Employee;
 import org.project.sms.repository.EmployeeRepository;
 
 import org.springframework.data.domain.Pageable;
@@ -24,19 +24,14 @@ public class EmployeeService {
 	@Transactional(readOnly = true)
 	public List<EmployeeDto> getEmp(Integer depId, Pageable pagination) {
 		return employeeRepository.findByDepartmentId(depId, pagination)
-				.map(employee -> new EmployeeDto(
-						employee.getId(),
-						employee.getName(),
-						employee.getDepartmentId(),
-						employee.getSalary(),
-						employee.getCountry(),
-						salaryStructureService.getSalaryStructure(employee.getId())))
+				.map(this::toDto)
 				.getContent();
 	}
 
-	public List<EmployeeDto> filterEmployee(EmployeeFilterRequest request) {
-		// TODO: Delegate to the repository and map results once filtering is implemented.
-		throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "Employee filtering is not implemented yet");
+	private EmployeeDto toDto(Employee employee) {
+		return new EmployeeDto(employee.getId(), employee.getName(), employee.getDepartmentId(),
+				employee.getSalary(), employee.getCountry(),
+				salaryStructureService.getSalaryStructure(employee.getId()));
 	}
 
 }

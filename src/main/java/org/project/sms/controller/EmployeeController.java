@@ -3,20 +3,19 @@ package org.project.sms.controller;
 import java.util.List;
 
 import org.project.sms.dto.EmployeeDto;
-import org.project.sms.dto.EmployeeFilterRequest;
 import org.project.sms.service.EmployeeService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/employees")
@@ -36,11 +35,6 @@ public class EmployeeController {
 		}
 
 		return employeeService.getEmp(depId, PageRequest.of(page, size, Sort.by("id")));
-	}
-
-	@GetMapping("/filter")
-	public List<EmployeeDto> filterEmployee(@ModelAttribute EmployeeFilterRequest request) {
-		return employeeService.filterEmployee(request);
 	}
 
 }
