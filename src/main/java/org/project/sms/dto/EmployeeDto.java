@@ -17,4 +17,6 @@ public class EmployeeDto {
 
 	String country;
 
+	SalaryStructureDto salaryStructureDto;
+
 }
