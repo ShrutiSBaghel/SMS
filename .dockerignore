@@ -1,0 +1,10 @@
+.git
+.idea
+.vercel
+target
+docs
+db
+src/test
+.env
+.env.*
+*.log

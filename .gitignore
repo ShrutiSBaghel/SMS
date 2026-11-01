@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Deployment secrets and local Vercel metadata
+.vercel/
+.env
+.env.*
+!.env.example

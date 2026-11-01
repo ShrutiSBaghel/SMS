@@ -1,0 +1,16 @@
+FROM eclipse-temurin:21-jdk-jammy AS build
+WORKDIR /workspace
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+COPY src/main/ src/main/
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw \
+    && ./mvnw -B -ntp -Dmaven.test.skip=true package
+
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+RUN groupadd --gid 10001 sms && useradd --uid 10001 --gid sms --no-create-home --system sms
+COPY --from=build --chown=sms:sms /workspace/target/*.jar /app/app.jar
+USER sms:sms
+ENV SPRING_PROFILES_ACTIVE=prod PORT=8080
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=70.0", "-Djava.io.tmpdir=/tmp", "-jar", "/app/app.jar"]
