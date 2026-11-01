@@ -9,7 +9,7 @@ import lombok.Value;
 public class SalaryDistributionResponseDto {
 
 	String groupBy;
-	BigDecimal totalSalary;
+	BigDecimal averageSalary;
 	long employeeCount;
 	long missingSalaryCount;
 	List<Group> groups;
@@ -18,10 +18,9 @@ public class SalaryDistributionResponseDto {
 	public static class Group {
 		String key;
 		String label;
-		BigDecimal totalSalary;
+		BigDecimal averageSalary;
 		long employeeCount;
 		long missingSalaryCount;
-		BigDecimal percentage;
 	}
 
 }

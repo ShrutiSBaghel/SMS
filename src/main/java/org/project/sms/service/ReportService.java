@@ -27,16 +27,22 @@ public class ReportService {
 			default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"groupBy must be department or country");
 		};
-		var total = rows.stream().map(SalaryDistributionProjection::getTotalSalary)
+		var salarySum = rows.stream().map(SalaryDistributionProjection::getSalarySum)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		long employeeCount = rows.stream().mapToLong(SalaryDistributionProjection::getEmployeeCount).sum();
+		long missingSalaryCount = rows.stream().mapToLong(SalaryDistributionProjection::getMissingSalaryCount).sum();
 		var groups = rows.stream().map(row -> new SalaryDistributionResponseDto.Group(
-				row.getGroupKey(), row.getLabel(), row.getTotalSalary(), row.getEmployeeCount(),
-				row.getMissingSalaryCount(), total.signum() == 0 ? BigDecimal.ZERO :
-				row.getTotalSalary().multiply(BigDecimal.valueOf(100)).divide(total, 2, RoundingMode.HALF_UP)))
+				row.getGroupKey(), row.getLabel(),
+				average(row.getSalarySum(), row.getEmployeeCount() - row.getMissingSalaryCount()),
+				row.getEmployeeCount(), row.getMissingSalaryCount()))
 				.toList();
-		return new SalaryDistributionResponseDto(groupBy, total,
-				rows.stream().mapToLong(SalaryDistributionProjection::getEmployeeCount).sum(),
-				rows.stream().mapToLong(SalaryDistributionProjection::getMissingSalaryCount).sum(), groups);
+		return new SalaryDistributionResponseDto(groupBy, average(salarySum, employeeCount - missingSalaryCount),
+				employeeCount, missingSalaryCount, groups);
+	}
+
+	private BigDecimal average(BigDecimal salarySum, long salaryCount) {
+		// Missing salaries are unknown, whereas a recorded zero is part of the average.
+		return salaryCount == 0 ? null : salarySum.divide(BigDecimal.valueOf(salaryCount), 2, RoundingMode.HALF_UP);
 	}
 
 }

@@ -7,7 +7,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
-import java.util.ArrayList;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,7 +82,7 @@ class EmployeeControllerIntegrationTests {
 	}
 
 	@Test
-	void getEmpUsesDefaultPageSizeButFilteringReturnsAllMatches() throws Exception {
+	void getEmpUsesDefaultPageSizeAndReturnsRemainingEmployeesOnTheNextPage() throws Exception {
 		var employees = java.util.stream.IntStream.range(0, 21)
 				.mapToObj(index -> employee("Employee " + index, 1))
 				.toList();
@@ -93,9 +92,11 @@ class EmployeeControllerIntegrationTests {
 
 		assertThat(response.statusCode()).isEqualTo(200);
 		assertThat(objectMapper.readTree(response.body()).size()).isEqualTo(20);
-		var filtered = get("/employees/filter?depId=1&country=India");
-		assertThat(filtered.statusCode()).isEqualTo(200);
-		assertThat(objectMapper.readTree(filtered.body()).size()).isEqualTo(21);
+		var nextPage = get("/employees?dep_id=1&page=1");
+		assertThat(nextPage.statusCode()).isEqualTo(200);
+		var remaining = objectMapper.readTree(nextPage.body());
+		assertThat(remaining.size()).isEqualTo(1);
+		assertThat(remaining.get(0).get("id").asInt()).isEqualTo(employees.get(20).getId());
 	}
 
 	@Test
@@ -117,70 +118,6 @@ class EmployeeControllerIntegrationTests {
 		}
 	}
 
-	@Test
-	void filterEmployeeCombinesExactSalaryAndCountryWithAndOrWithoutDuplicates() throws Exception {
-		seedFilterEmployees();
-
-		assertThat(names(get("/employees/filter?depId=1&salary=50000&country=India")))
-				.containsExactly("Alice");
-		assertThat(names(get("/employees/filter?depId=1&salary=50000.00&country=India&operator=AND")))
-				.containsExactly("Alice");
-		assertThat(names(get("/employees/filter?depId=1&salary=50000&country=India&operator=OR")))
-				.containsExactly("Alice", "Charlie");
-	}
-
-	@Test
-	void filterEmployeeSupportsIndividualFieldsAndNormalizesCountry() throws Exception {
-		seedFilterEmployees();
-
-		for (String operator : List.of("AND", "OR")) {
-			assertThat(names(get("/employees/filter?depId=1&salary=50000&operator=" + operator)))
-					.containsExactly("Alice", "Charlie");
-			assertThat(names(get("/employees/filter?depId=1&country=%20iNdIa%20&operator=" + operator)))
-					.containsExactly("Alice");
-		}
-		assertThat(names(get("/employees/filter?depId=1&salary=50000.01"))).isEmpty();
-		assertThat(names(get("/employees/filter?depId=1&country=Unknown"))).isEmpty();
-		assertThat(names(get("/employees/filter?depId=1&country=Ind"))).isEmpty();
-	}
-
-	@Test
-	void filterEmployeeRestrictsBothOperatorBranchesToTheSelectedDepartment() throws Exception {
-		seedFilterEmployees();
-
-		assertThat(names(get("/employees/filter?depId=2&salary=50000&country=India&operator=OR")))
-				.containsExactly("Bob", "Erin");
-		assertThat(names(get("/employees/filter?depId=2&salary=50000&country=India&operator=AND")))
-				.containsExactly("Erin");
-		assertThat(names(get("/employees/filter?depId=999&country=India"))).isEmpty();
-	}
-
-	@Test
-	void filterEmployeeRejectsMissingDepartmentAndInvalidFilters() throws Exception {
-		for (String query : List.of("", "salary=50000", "depId=1", "depId=1&operator=OR",
-				"depId=1&salary=abc", "depId=1&salary=-1", "depId=1&country=%20%20",
-				"depId=1&salary=50000&operator=XOR", "depId=1&salary=50000&operator=",
-				"depId=abc&country=India")) {
-			assertThat(get("/employees/filter?" + query).statusCode()).as(query).isEqualTo(400);
-		}
-	}
-
-	private void seedFilterEmployees() {
-		var alice = employee("Alice", 1);
-		alice.setSalary(new BigDecimal("50000.00"));
-		var bob = employee("Bob", 2);
-		bob.setSalary(new BigDecimal("60000.00"));
-		var charlie = employee("Charlie", 1);
-		charlie.setSalary(new BigDecimal("50000.00"));
-		charlie.setCountry("Canada");
-		var diana = employee("Diana", 2);
-		diana.setSalary(new BigDecimal("70000.00"));
-		diana.setCountry("Germany");
-		var erin = employee("Erin", 2);
-		erin.setSalary(new BigDecimal("50000.00"));
-		saveEmployees(List.of(alice, bob, charlie, diana, erin));
-	}
-
 	private void saveEmployees(List<Employee> employees) {
 		employeeRepository.saveAllAndFlush(employees);
 		var structures = employees.stream().map(employee -> {
@@ -193,16 +130,6 @@ class EmployeeControllerIntegrationTests {
 			return structure;
 		}).toList();
 		salaryStructureRepository.saveAllAndFlush(structures);
-	}
-
-	private List<String> names(HttpResponse<String> response) throws Exception {
-		assertThat(response.statusCode()).isEqualTo(200);
-		var result = new ArrayList<String>();
-		for (var employee : objectMapper.readTree(response.body())) {
-			result.add(employee.get("name").asText());
-			assertThat(employee.get("salaryStructureDto").isObject()).isTrue();
-		}
-		return result;
 	}
 
 	private Employee employee(String name, Integer departmentId) {

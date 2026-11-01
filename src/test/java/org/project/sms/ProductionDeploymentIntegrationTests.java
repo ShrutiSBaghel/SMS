@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
 import java.time.Duration;
+import java.util.Base64;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -67,6 +68,8 @@ class ProductionDeploymentIntegrationTests {
 		properties.add("SUPABASE_DB_USERNAME", POSTGRES::getUsername);
 		properties.add("SUPABASE_DB_PASSWORD", POSTGRES::getPassword);
 		properties.add("CORS_ALLOWED_ORIGINS", () -> "https://sms-ui-test.vercel.app");
+		// Public test-only key; the prod profile requires this environment placeholder explicitly.
+		properties.add("JWT_SECRET", () -> Base64.getEncoder().encodeToString(new byte[32]));
 	}
 
 	@AfterAll
@@ -116,7 +119,7 @@ class ProductionDeploymentIntegrationTests {
 						HttpResponse.BodyHandlers.ofString());
 				assertThat(response.statusCode()).isEqualTo(200);
 				var data = mapper.readTree(response.body());
-				assertThat(data.get("totalSalary").decimalValue()).isEqualByComparingTo("1234.56");
+				assertThat(data.get("averageSalary").decimalValue()).isEqualByComparingTo("1234.56");
 				assertThat(data.get("groups").get(0).get("label").asText())
 						.isEqualTo(groupBy.equals("country") ? "India" : "Engineering");
 			}

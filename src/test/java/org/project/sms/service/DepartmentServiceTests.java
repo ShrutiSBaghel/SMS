@@ -9,9 +9,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.project.sms.entity.Department;
 import org.project.sms.repository.DepartmentRepository;
+import org.project.sms.repository.EmployeeRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -20,11 +22,14 @@ class DepartmentServiceTests {
 	@Mock
 	private DepartmentRepository departmentRepository;
 
+	@Mock
+	private EmployeeRepository employeeRepository;
+
 	@InjectMocks
 	private DepartmentService departmentService;
 
 	@Test
-	void getAllDepMapsEveryDepartmentWithZeroEmployees() {
+	void getAllDepMapsEveryDepartmentWithItsEmployeeCount() {
 		var engineering = new Department();
 		engineering.setId(1);
 		engineering.setName("Engineering");
@@ -32,15 +37,18 @@ class DepartmentServiceTests {
 		finance.setId(2);
 		finance.setName("Finance");
 		when(departmentRepository.findAll()).thenReturn(List.of(engineering, finance));
+		when(employeeRepository.countByDepartmentId(1)).thenReturn(12L);
+		when(employeeRepository.countByDepartmentId(2)).thenReturn(0L);
 
 		var result = departmentService.getAllDep();
 
 		assertThat(result).hasSize(2);
 		assertThat(result.get(0).getId()).isEqualTo(1);
 		assertThat(result.get(0).getName()).isEqualTo("Engineering");
+		assertThat(result.get(0).getTotalEmployees()).isEqualTo(12);
 		assertThat(result.get(1).getId()).isEqualTo(2);
 		assertThat(result.get(1).getName()).isEqualTo("Finance");
-		assertThat(result).allSatisfy(department -> assertThat(department.getTotalEmployees()).isZero());
+		assertThat(result.get(1).getTotalEmployees()).isZero();
 		verify(departmentRepository).findAll();
 	}
 
@@ -50,6 +58,7 @@ class DepartmentServiceTests {
 
 		assertThat(departmentService.getAllDep()).isEmpty();
 		verify(departmentRepository).findAll();
+		verifyNoInteractions(employeeRepository);
 	}
 
 }

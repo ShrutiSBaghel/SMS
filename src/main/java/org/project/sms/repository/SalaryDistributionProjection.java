@@ -6,7 +6,7 @@ public interface SalaryDistributionProjection {
 
 	String getGroupKey();
 	String getLabel();
-	BigDecimal getTotalSalary();
+	BigDecimal getSalarySum();
 	long getEmployeeCount();
 	long getMissingSalaryCount();
 

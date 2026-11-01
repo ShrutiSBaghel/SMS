@@ -65,29 +65,55 @@ class ReportControllerIntegrationTests {
 		var response = get("department", true);
 		assertThat(response.statusCode()).isEqualTo(200);
 		var data = mapper.readTree(response.body());
-		assertThat(data.get("totalSalary").decimalValue()).isEqualByComparingTo("200");
+		assertThat(data.get("averageSalary").decimalValue()).isEqualByComparingTo("50.00");
+		assertThat(data.has("totalSalary")).isFalse();
 		assertThat(data.get("employeeCount").asInt()).isEqualTo(5);
 		assertThat(data.get("missingSalaryCount").asInt()).isEqualTo(1);
 		assertThat(data.get("groups").size()).isEqualTo(3);
-		assertThat(data.get("groups").get(0).get("totalSalary").decimalValue()).isEqualByComparingTo("150.30");
-		assertThat(data.get("groups").get(0).get("percentage").decimalValue()).isEqualByComparingTo("75.15");
+		assertThat(data.get("groups").get(0).get("averageSalary").decimalValue()).isEqualByComparingTo("75.15");
+		assertThat(data.get("groups").get(0).has("totalSalary")).isFalse();
+		assertThat(data.get("groups").get(0).has("percentage")).isFalse();
 		assertThat(data.get("groups").get(2).get("label").asText()).isEqualTo("Unassigned");
 	}
 
 	@Test
-	void combinesCountryCaseAndWhitespaceAndKeepsZeroTotalsSafe() throws Exception {
+	void averagesCountrySalariesIgnoringMissingValuesButIncludingZero() throws Exception {
 		employee(null, " India ", "10");
 		employee(null, "india", "20");
+		employee(null, "INDIA", null);
+		employee(null, "Canada", "0");
 		employee(null, " ", null);
 		var data = mapper.readTree(get("country", true).body());
-		assertThat(data.get("groups").size()).isEqualTo(2);
-		assertThat(data.get("groups").get(0).get("employeeCount").asInt()).isEqualTo(2);
-		assertThat(data.get("groups").get(0).get("totalSalary").decimalValue()).isEqualByComparingTo("30");
+		assertThat(data.get("groups").size()).isEqualTo(3);
+		assertThat(data.get("averageSalary").decimalValue()).isEqualByComparingTo("10.00");
+		assertThat(data.get("groups").get(0).get("employeeCount").asInt()).isEqualTo(3);
+		assertThat(data.get("groups").get(0).get("missingSalaryCount").asInt()).isEqualTo(1);
+		assertThat(data.get("groups").get(0).get("averageSalary").decimalValue()).isEqualByComparingTo("15.00");
+		assertThat(data.get("groups").get(1).get("averageSalary").decimalValue()).isZero();
+		assertThat(data.get("groups").get(2).get("averageSalary").isNull()).isTrue();
 		employees.deleteAll();
 		employee(null, null, null);
 		data = mapper.readTree(get("country", true).body());
-		assertThat(data.get("totalSalary").decimalValue()).isZero();
-		assertThat(data.get("groups").get(0).get("percentage").decimalValue()).isZero();
+		assertThat(data.get("averageSalary").isNull()).isTrue();
+		assertThat(data.get("groups").get(0).get("averageSalary").isNull()).isTrue();
+	}
+
+	@Test
+	void sortsByAverageSalaryInsteadOfGroupPayrollForBothGroupings() throws Exception {
+		var large = new Department();
+		large.setName("Large team");
+		var small = new Department();
+		small.setName("Small team");
+		departments.saveAllAndFlush(List.of(large, small));
+		employee(large.getId(), "India", "100");
+		employee(large.getId(), "India", "100");
+		employee(small.getId(), "Canada", "150");
+		for (var grouping : new String[] {"department", "country"}) {
+			var data = mapper.readTree(get(grouping, true).body());
+			assertThat(data.get("averageSalary").decimalValue()).isEqualByComparingTo("116.67");
+			assertThat(data.get("groups").get(0).get("averageSalary").decimalValue()).isEqualByComparingTo("150.00");
+			assertThat(data.get("groups").get(1).get("averageSalary").decimalValue()).isEqualByComparingTo("100.00");
+		}
 	}
 
 	@Test
